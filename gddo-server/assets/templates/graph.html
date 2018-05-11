@@ -7,7 +7,7 @@
     </head>
     <body>
       <div class="well-small">
-        Package <a href="/{{.pdoc.ImportPath}}">{{.pdoc.Name}}</a>
+        Package <a href="{{.pdoc.ImportPath|prefixedPath}}">{{.pdoc.Name}}</a>
         {{if .pdoc.ProjectRoot}}<span class="text-muted">|</span> 
             {{if .hide}}
                 <a href="?import-graph">Show</a>

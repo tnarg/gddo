@@ -78,6 +78,7 @@ func setFlashMessages(resp http.ResponseWriter, messages []flashMessage) {
 
 type tdoc struct {
 	*doc.Package
+	v              *viper.Viper
 	allExamples    []*texample
 	sourcegraphURL string
 }
@@ -92,6 +93,7 @@ type texample struct {
 
 func newTDoc(v *viper.Viper, pdoc *doc.Package) *tdoc {
 	return &tdoc{
+		v:              v,
 		Package:        pdoc,
 		sourcegraphURL: v.GetString(ConfigSourcegraphURL),
 	}
@@ -248,7 +250,7 @@ func (pdoc *tdoc) Breadcrumbs(templateName string) htemp.HTML {
 			(templateName != "dir.html" && templateName != "cmd.html" && templateName != "pkg.html")
 		if link {
 			buf.WriteString(`<a href="`)
-			buf.WriteString(formatPathFrag(pdoc.ImportPath[:j], ""))
+			buf.WriteString(formatPathFrag(pdoc.v.GetString(ConfigPathPrefix), pdoc.ImportPath[:j], ""))
 			buf.WriteString(`">`)
 		} else {
 			buf.WriteString(`<span class="text-muted">`)
@@ -286,9 +288,13 @@ func (pdoc *tdoc) StatusDescription() htemp.HTML {
 	return htemp.HTML(desc)
 }
 
-func formatPathFrag(path, fragment string) string {
-	if len(path) > 0 && path[0] != '/' {
-		path = "/" + path
+func formatPathFrag(pathPrefix, path, fragment string) string {
+	if len(path) > 0 {
+		if path[0] != '/' {
+			path = "/" + path
+		}
+
+		path = pathPrefix + path
 	}
 	u := url.URL{Path: path, Fragment: fragment}
 	return u.String()
@@ -359,7 +365,7 @@ func replaceAll(src []byte, re *regexp.Regexp, replace func(out, src []byte, m [
 }
 
 // commentFn formats a source code comment as HTML.
-func commentFn(v string) htemp.HTML {
+func commentFn(pathPrefix, v string) htemp.HTML {
 	var buf bytes.Buffer
 	godoc.ToHTML(&buf, v, nil)
 	p := buf.Bytes()
@@ -395,6 +401,8 @@ func commentFn(v string) htemp.HTML {
 		}
 		out = append(out, src[m[0]:m[2]]...)
 		out = append(out, `<a href="/`...)
+		out = append(out, []byte(pathPrefix)...)
+		out = append(out, `/`...)
 		out = append(out, path...)
 		out = append(out, `">`...)
 		out = append(out, path...)
@@ -416,7 +424,7 @@ func commentTextFn(v string) string {
 
 var period = []byte{'.'}
 
-func codeFn(c doc.Code, typ *doc.Type) htemp.HTML {
+func codeFn(pathPrefix string, c doc.Code, typ *doc.Type) htemp.HTML {
 	var buf bytes.Buffer
 	last := 0
 	src := []byte(c.Text)
@@ -426,7 +434,7 @@ func codeFn(c doc.Code, typ *doc.Type) htemp.HTML {
 		switch a.Kind {
 		case doc.PackageLinkAnnotation:
 			buf.WriteString(`<a href="`)
-			buf.WriteString(formatPathFrag(c.Paths[a.PathIndex], ""))
+			buf.WriteString(formatPathFrag(pathPrefix, c.Paths[a.PathIndex], ""))
 			buf.WriteString(`">`)
 			htemp.HTMLEscape(&buf, src[a.Pos:a.End])
 			buf.WriteString(`</a>`)
@@ -440,7 +448,7 @@ func codeFn(c doc.Code, typ *doc.Type) htemp.HTML {
 			n := src[a.Pos:a.End]
 			n = n[bytes.LastIndex(n, period)+1:]
 			buf.WriteString(`<a href="`)
-			buf.WriteString(formatPathFrag(p, string(n)))
+			buf.WriteString(formatPathFrag(pathPrefix, p, string(n)))
 			buf.WriteString(`">`)
 			htemp.HTMLEscape(&buf, src[a.Pos:a.End])
 			buf.WriteString(`</a>`)
@@ -539,8 +547,12 @@ func parseTemplates(dir string, cb *httputil.CacheBusters, v *viper.Viper) (temp
 		{"graph.html", "common.html"},
 	}
 	hfuncs := htemp.FuncMap{
-		"code":              codeFn,
-		"comment":           commentFn,
+		"code": func(c doc.Code, typ *doc.Type) htemp.HTML {
+			return codeFn(v.GetString(ConfigPathPrefix), c, typ)
+		},
+		"comment": func(s string) htemp.HTML {
+			return commentFn(v.GetString(ConfigPathPrefix), s)
+		},
 		"equal":             reflect.DeepEqual,
 		"gaAccount":         func() string { return v.GetString(ConfigGAAccount) },
 		"host":              hostFn,
@@ -551,8 +563,15 @@ func parseTemplates(dir string, cb *httputil.CacheBusters, v *viper.Viper) (temp
 		"map":               mapFn,
 		"noteTitle":         noteTitleFn,
 		"relativePath":      relativePathFn,
-		"sidebarEnabled":    func() bool { return v.GetBool(ConfigSidebar) },
-		"staticPath":        func(p string) string { return cb.AppendQueryParam(p, "v") },
+		"prefixedPath": func(path string) string {
+			if !strings.HasPrefix(path, "/") {
+				path = "/" + path
+			}
+
+			return v.GetString(ConfigPathPrefix) + path
+		},
+		"sidebarEnabled": func() bool { return v.GetBool(ConfigSidebar) },
+		"staticPath":     func(p string) string { return v.GetString(ConfigPathPrefix) + cb.AppendQueryParam(p, "v") },
 	}
 	for _, set := range htmlSets {
 		templateName := set[0]

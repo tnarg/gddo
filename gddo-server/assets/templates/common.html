@@ -21,7 +21,7 @@
 {{end}}
 
 {{define "ProjectNav"}}{{template "FlashMessages" .flashMessages}}<div class="clearfix" id="x-projnav">
-  {{if .pdoc.ProjectRoot}}{{if .pdoc.ProjectURL}}<a href="{{.pdoc.ProjectURL}}"><strong>{{.pdoc.ProjectName}}:</strong></a>{{else}}<strong>{{.pdoc.ProjectName}}:</strong>{{end}}{{else}}<a href="/-/go">Go:</a>{{end}}
+  {{if .pdoc.ProjectRoot}}{{if .pdoc.ProjectURL}}<a href="{{.pdoc.ProjectURL}}"><strong>{{.pdoc.ProjectName}}:</strong></a>{{else}}<strong>{{.pdoc.ProjectName}}:</strong>{{end}}{{else}}<a href="{{prefixedPath "/-/go"}}">Go:</a>{{end}}
   {{.pdoc.Breadcrumbs templateName}}
   {{if and .pdoc.Name (or templateName "pkg.html" templateName "cmd.html")}}
   <span class="pull-right">
@@ -39,7 +39,7 @@
 {{define "Pkgs"}}
   <table class="table table-condensed">
   <thead><tr><th>Path</th><th>Synopsis</th></tr></thead>
-  <tbody>{{range .}}<tr><td>{{if .Path|isValidImportPath}}<a href="/{{.Path}}">{{.Path|importPath}}</a>{{else}}{{.Path|importPath}}{{end}}</td><td>{{.Synopsis|importPath}}</td></tr>
+  <tbody>{{range .}}<tr><td>{{if .Path|isValidImportPath}}<a href="{{.Path|prefixedPath}}">{{.Path|importPath}}</a>{{else}}{{.Path|importPath}}{{end}}</td><td>{{.Synopsis|importPath}}</td></tr>
   {{end}}</tbody>
   </table>
 {{end}}
@@ -50,7 +50,7 @@
     <tbody>{{range .}}
       <tr><td>
         {{if .Path|isValidImportPath}}
-        <a href="/{{.Path}}">{{.Path|importPath}}</a>
+        <a href="{{.Path|prefixedPath}}">{{.Path|importPath}}</a>
           <ul class="list-inline">
             <li class="additional-info">{{.ImportCount}} imports</li>
             {{if .Fork}}<li class="additional-info">· fork</li>{{end}}
@@ -95,12 +95,12 @@
 {{if $.pkgs}}<h3 id="pkg-subdirectories">Directories <a class="permalink" href="#pkg-subdirectories">&para;</a></h3>
     <table class="table table-condensed">
     <thead><tr><th>Path</th><th>Synopsis</th></tr></thead>
-    <tbody>{{range $.pkgs}}<tr><td><a href="/{{.Path}}">{{relativePath .Path $.pdoc.ImportPath}}</a><td>{{.Synopsis}}</td></tr>{{end}}</tbody>
+    <tbody>{{range $.pkgs}}<tr><td><a href="{{.Path|prefixedPath}}">{{relativePath .Path $.pdoc.ImportPath}}</a><td>{{.Synopsis}}</td></tr>{{end}}</tbody>
     </table>
 {{end}}
 <div id="x-pkginfo">
 {{with $.pdoc}}
-  <form name="x-refresh" method="POST" action="/-/refresh"><input type="hidden" name="path" value="{{.ImportPath}}"></form>
+  <form name="x-refresh" method="POST" action="{{prefixedPath "/-/refresh"}}"><input type="hidden" name="path" value="{{.ImportPath}}"></form>
   <p>{{if or .Imports $.importerCount}}Package {{.Name}} {{if .Imports}}imports <a href="?imports">{{.Imports|len}} packages</a> (<a href="?import-graph">graph</a>){{end}}{{if and .Imports $.importerCount}} and {{end}}{{if $.importerCount}}is imported by <a href="?importers">{{$.importerCount}} packages</a>{{end}}.{{end}}
   {{if not .Updated.IsZero}}Updated <span class="timeago" title="{{.Updated.Format "2006-01-02T15:04:05Z"}}">{{.Updated.Format "2006-01-02"}}</span>{{if or (equal .GOOS "windows") (equal .GOOS "darwin")}} with GOOS={{.GOOS}}{{end}}.{{end}}
   <a href="javascript:document.getElementsByName('x-refresh')[0].submit();" title="Refresh this page from the source.">Refresh now</a>.

@@ -33,6 +33,7 @@ const (
 	ConfigAssetsDir         = "assets"
 	ConfigRobotThreshold    = "robot"
 	ConfigGCELogName        = "gce_log_name"
+	ConfigPathPrefix        = "path_prefix"
 
 	// Database Config
 	ConfigDBServer      = "db-server"
@@ -170,6 +171,7 @@ func buildFlags() *pflag.FlagSet {
 	flags.String(ConfigGAERemoteAPI, "", "Remoteapi endpoint for App Engine Search. Defaults to serviceproxy-dot-${project}.appspot.com.")
 	flags.Float64(ConfigTraceSamplerFraction, 0.1, "Fraction of the requests sampled by the trace API.")
 	flags.Float64(ConfigTraceSamplerMaxQPS, 5, "Max number of requests sampled every second by the trace API.")
+	flags.String(ConfigPathPrefix, "", "Prepend path to static assets")
 
 	return flags
 }

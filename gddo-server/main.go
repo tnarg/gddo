@@ -242,7 +242,7 @@ func (s *server) servePackage(resp http.ResponseWriter, req *http.Request) error
 		if _, _, err := s.getDoc(req.Context(), e.Redirect, requestType); gosrc.IsNotFound(err) {
 			return &httpError{status: http.StatusNotFound}
 		}
-		u := "/" + e.Redirect
+		u := s.v.GetString(ConfigPathPrefix) + "/" + e.Redirect
 		if req.URL.RawQuery != "" {
 			u += "?" + req.URL.RawQuery
 		}
@@ -439,7 +439,7 @@ func (s *server) serveRefresh(resp http.ResponseWriter, req *http.Request) error
 	} else if err != nil {
 		setFlashMessages(resp, []flashMessage{{ID: "refresh", Args: []string{errorText(err)}}})
 	}
-	http.Redirect(resp, req, "/"+importPath, http.StatusFound)
+	http.Redirect(resp, req, s.v.GetString(ConfigPathPrefix)+"/"+importPath, http.StatusFound)
 	return nil
 }
 
@@ -552,11 +552,11 @@ func (s *server) serveHome(resp http.ResponseWriter, req *http.Request) error {
 	if gosrc.IsValidRemotePath(q) || (strings.Contains(q, "/") && gosrc.IsGoRepoPath(q)) {
 		pdoc, pkgs, err := s.getDoc(req.Context(), q, queryRequest)
 		if e, ok := err.(gosrc.NotFoundError); ok && e.Redirect != "" {
-			http.Redirect(resp, req, "/"+e.Redirect, http.StatusFound)
+			http.Redirect(resp, req, s.v.GetString(ConfigPathPrefix)+"/"+e.Redirect, http.StatusFound)
 			return nil
 		}
 		if err == nil && (pdoc != nil || len(pkgs) > 0) {
-			http.Redirect(resp, req, "/"+q, http.StatusFound)
+			http.Redirect(resp, req, s.v.GetString(ConfigPathPrefix)+"/"+q, http.StatusFound)
 			return nil
 		}
 	}
